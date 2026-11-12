@@ -64,9 +64,10 @@ The library is `vkm_network`, static and position-independent, for linking into 
 consumer's own. Headers are included by the library's folder: `#include "vkm_network/connection.h"`;
 everything is in `Vkm::Network`.
 
-| Option                | Default | What                                                                    |
-|-----------------------|---------|-------------------------------------------------------------------------|
-| `VKM_NETWORK_ASSERTS` | `OFF`   | The library's `VKM_ASSERT`s run whatever the build type (`-UNDEBUG` on its own sources) |
+| Option                    | Default | What                                                                                    |
+|---------------------------|---------|-----------------------------------------------------------------------------------------|
+| `VKM_NETWORK_ASSERTS`     | `OFF`   | The library's `VKM_ASSERT`s run whatever the build type (`-UNDEBUG` on its own sources) |
+| `VKM_NETWORK_BUILD_TESTS` | `OFF`   | Builds `vkm_network_tests`: each test a CTest of its own, labeled `vkm_network`         |
 
 ## What it holds
 
@@ -82,6 +83,14 @@ everything is in `Vkm::Network`.
 | `little_endian.h`     | `readLittleEndian`, `writeLittleEndian`                                        |
 
 Each is under `src/vkm_network/`.
+
+## Tests
+
+`tests/` holds the library's own suite, built with `VKM_NETWORK_BUILD_TESTS`: each test is
+`TEST("what works")` in `tests/<topic>.cpp`, a CTest named `vkm_network: <what works>` and run in a
+process of its own, so `ctest -L vkm_network` runs them in the consumer's tree, with `-C <config>` under
+a multi-config generator. They link the library alone and talk on the loopback only. Beside them,
+CTests of the library as a consumer builds it: its includes, its CMake, and its debug flags.
 
 ## In vkmEngine
 

@@ -93,3 +93,10 @@ endif()
 target_compile_definitions(${PROJECT_NAME} PRIVATE
     VKM_LOG_SUFFIX="VKM-NETWORK"
 )
+
+# The suite (tests/), built when the consumer asks for it.
+option(VKM_NETWORK_BUILD_TESTS "Build the vkm_network test suite" OFF)
+if(VKM_NETWORK_BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(tests)
+endif()
