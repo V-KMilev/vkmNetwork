@@ -27,15 +27,18 @@ constexpr int32_t signedLevels(uint32_t width) {
 uint32_t toSigned(float value, float range, uint32_t width) {
     const int32_t levels = signedLevels(width);
     if (std::isnan(value)) return static_cast<uint32_t>(levels);
-    const float   clamped = glm::clamp(value / range, -1.0f, 1.0f);
-    const int32_t step    = static_cast<int32_t>(std::lround(clamped * static_cast<float>(levels)));
+    const float clamped = glm::clamp(value / range, -1.0f, 1.0f);
+    // Held to the levels: past 25 bits a float rounds them up, which would land the ends one code out,
+    // and at 32 overflow.
+    const int64_t step = std::clamp<int64_t>(std::llround(clamped * static_cast<float>(levels)), -levels, levels);
     return static_cast<uint32_t>(step + levels);
 }
 
 float fromSigned(uint32_t raw, float range, uint32_t width) {
     const int32_t levels = signedLevels(width);
-    // The top code is one toSigned never writes; a damaged packet still can.
-    const int32_t step = std::min(static_cast<int32_t>(raw) - levels, levels);
+    // The top code is one toSigned never writes; a damaged packet still can. In 64 bits, as at 32 bits
+    // a code less the levels does not fit.
+    const int64_t step = std::min<int64_t>(static_cast<int64_t>(raw) - levels, levels);
     return (static_cast<float>(step) / static_cast<float>(levels)) * range;
 }
 
