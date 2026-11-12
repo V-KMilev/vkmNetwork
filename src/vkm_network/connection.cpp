@@ -1,0 +1,139 @@
+#include "vkm_network/connection.h"
+
+#include <algorithm>
+#include <cmath>
+#include <cstring>
+#include <utility>
+
+#include "vkm_network/little_endian.h"
+
+namespace Vkm::Network {
+
+namespace {
+
+constexpr float TRIP_SMOOTHING = 0.1f;  ///< How much of a new measurement is taken. Small, so one packet held
+                                        ///< in a router queue barely moves the estimate.
+
+constexpr uint16_t SEQUENCE_HALF = 0x8000;  ///< Half the sequence space: the point past which "newer" stops
+                                            ///< being knowable.
+
+constexpr size_t SENT_REMEMBERED = 256;  ///< Packets remembered until acknowledged, so the acknowledgement
+                                         ///< can be timed. Bounded against a peer that never answers;
+                                         ///< anything older is not timed.
+
+} // namespace
+
+bool isNewerSequence(uint16_t a, uint16_t b) {
+    return (a > b && a - b < SEQUENCE_HALF) || (b > a && b - a > SEQUENCE_HALF);
+}
+
+void Connection::open(const Address& peer) {
+    // The sent list keeps its buffer, so a reply to an address that holds no seat allocates nothing.
+    std::vector<Sent> sent = std::move(m_sent);
+    sent.clear();
+
+    *this  = Connection{};
+    m_peer = peer;
+    m_sent = std::move(sent);
+}
+
+void Connection::frame(const uint8_t* payload, size_t size, std::vector<uint8_t>& out) {
+    out.clear();
+    out.resize(HEADER_BYTES + size);
+
+    const uint16_t sequence = m_outgoing++;
+    // On the wrap as well as at the start: NO_SEQUENCE means "nothing heard".
+    if (m_outgoing == NO_SEQUENCE) ++m_outgoing;
+    writeLittleEndian(&out[0], sequence);
+    writeLittleEndian(&out[2], m_newest);
+    writeLittleEndian(&out[4], m_seen);
+    if (size > 0) std::memcpy(&out[HEADER_BYTES], payload, size);
+
+    m_sent.push_back({sequence, 0.0f});
+    if (m_sent.size() > SENT_REMEMBERED) m_sent.erase(m_sent.begin());
+}
+
+bool Connection::accept(const uint8_t* bytes, size_t size, std::vector<uint16_t>& acknowledged) {
+    if (size < HEADER_BYTES) return false;
+
+    const auto sequence           = readLittleEndian<uint16_t>(&bytes[0]);
+    const auto acknowledgedNewest = readLittleEndian<uint16_t>(&bytes[2]);
+    const auto acknowledgedBefore = readLittleEndian<uint32_t>(&bytes[4]);
+
+    if (m_heard && !isNewerSequence(sequence, m_newest)) return false;
+
+    // Kept for refuse(): marking it seen claims a payload not yet read.
+    m_wasNewest = m_newest;
+    m_wasSeen   = m_seen;
+    m_wasHeard  = m_heard;
+
+    if (!m_heard) {
+        m_newest = sequence;
+        m_heard  = true;
+    } else {
+        // Shift and mark the old newest; at exactly 32 it is the last bit,
+        // past that nothing is knowable. In 64 bits: a 32-bit shift by 32 is UB.
+        const uint16_t advance = static_cast<uint16_t>(sequence - m_newest);
+
+        m_missed += advance - 1;
+
+        m_seen = advance > 32
+            ? 0u
+            : static_cast<uint32_t>(
+                (static_cast<uint64_t>(m_seen) << advance) | (uint64_t{1} << (advance - 1))
+            );
+        m_newest = sequence;
+    }
+
+    ++m_arrived;
+
+    // Nothing acknowledged, window included: timing or reporting it would
+    // invent a trip and confirm a packet never received.
+    if (acknowledgedNewest != NO_SEQUENCE) {
+        recordTrip(acknowledgedNewest, acknowledged);
+        for (int bit = 0; bit < 32; ++bit) {
+            if (acknowledgedBefore & (1u << bit)) {
+                recordTrip(static_cast<uint16_t>(acknowledgedNewest - (bit + 1)), acknowledged);
+            }
+        }
+    }
+
+    m_silent = 0.0f;
+    return true;
+}
+
+void Connection::refuse() {
+    m_newest = m_wasNewest;
+    m_seen   = m_wasSeen;
+    m_heard  = m_wasHeard;
+}
+
+void Connection::recordTrip(uint16_t acknowledged, std::vector<uint16_t>& reported) {
+    const auto found = std::find_if(
+        m_sent.begin(),
+        m_sent.end(),
+        [acknowledged](const Sent& s) { return s.sequence == acknowledged; }
+    );
+    // Not found: reported already, or fell out of the window.
+    if (found == m_sent.end()) return;
+
+    const float trip = found->age;
+    m_sent.erase(found);
+    reported.push_back(acknowledged);
+
+    if (m_roundTrip <= 0.0f) {
+        m_roundTrip = trip;
+        m_variation = 0.0f;
+        return;
+    }
+    const float error = trip - m_roundTrip;
+    m_roundTrip += error * TRIP_SMOOTHING;
+    m_variation += (std::abs(error) - m_variation) * TRIP_SMOOTHING;
+}
+
+void Connection::advance(float seconds) {
+    m_silent += std::min(seconds, MAX_SILENCE_A_FRAME);
+    for (Sent& sent : m_sent) sent.age += seconds;
+}
+
+} // namespace Vkm::Network
