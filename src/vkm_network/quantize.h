@@ -51,10 +51,11 @@ float fromFixed(uint32_t raw, float low, float step);
  * @return The fewest bits, at most 32, whose codes reach across @p span.
  */
 constexpr uint32_t fixedBits(float span, float step) {
+    // span / step steps take one code more than that: the first stands for the bottom of the span.
     uint32_t bits = 1;
     float range = 2.0f;
     const float need = span / step;
-    while (range < need && bits < 32u) {
+    while (range <= need && bits < 32u) {
         range *= 2.0f;
         ++bits;
     }
