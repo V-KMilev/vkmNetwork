@@ -113,7 +113,7 @@ TEST("an empty datagram is one read of its own") {
     CHECK(got == bytesOf("after"));
 }
 
-TEST("a datagram past MAX_DATAGRAM is not sent, and one that arrives past it is dropped and said once") {
+TEST("a datagram past MAX_DATAGRAM is refused when sent and dropped when it arrives, each said once") {
     UdpSocket a;
     UdpSocket b;
     REQUIRE(a.open(0));
@@ -122,6 +122,8 @@ TEST("a datagram past MAX_DATAGRAM is not sent, and one that arrives past it is 
     const std::vector<uint8_t> big(UdpSocket::MAX_DATAGRAM + 1, 0xAB);
     const std::vector<uint8_t> most(UdpSocket::MAX_DATAGRAM, 0xCD);
     CHECK(!a.send(b.localAddress(), big.data(), big.size()));
+    CHECK(!a.send(b.localAddress(), big.data(), big.size()));
+    CHECK(countOf(Vkm::Test::logText(), "Refusing a") == 1);
     CHECK(a.send(b.localAddress(), most.data(), most.size()));
     std::vector<uint8_t> got;
     Address              from;

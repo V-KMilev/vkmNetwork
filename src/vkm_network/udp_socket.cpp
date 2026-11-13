@@ -129,18 +129,23 @@ void UdpSocket::close() {
     m_readFailed  = false;
     m_writeFailed = false;
     m_oversized   = false;
+    m_refusedBig  = false;
 }
 
 bool UdpSocket::send(const Address& to, const uint8_t* bytes, size_t size) {
     if (m_handle == INVALID || !to || !bytes || size == 0) return false;
 
     if (size > MAX_DATAGRAM) {
-        LOG_ERROR(
-            "Refusing a %zu byte datagram: past %zu it is fragmented, and "
-            "one lost fragment loses all of it",
-            size,
-            MAX_DATAGRAM
-        );
+        // Once a socket, as a failed write: a caller that builds one too big builds every one too big.
+        if (!m_refusedBig) {
+            m_refusedBig = true;
+            LOG_ERROR(
+                "Refusing a %zu byte datagram: past %zu it is fragmented, and "
+                "one lost fragment loses all of it; further oversized sends on this socket are not repeated",
+                size,
+                MAX_DATAGRAM
+            );
+        }
         return false;
     }
 

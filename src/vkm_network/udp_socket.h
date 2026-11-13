@@ -46,7 +46,7 @@ class UdpSocket {
         /**
          * @brief Send @p size bytes to @p to.
          *
-         * Refused past MAX_DATAGRAM.
+         * Refused past MAX_DATAGRAM, said once a socket until close().
          *
          * @param to    Where it goes.
          * @param bytes The payload.
@@ -98,6 +98,7 @@ class UdpSocket {
         bool       m_readFailed  = false;  ///< A read failed; say so once, not per frame.
         bool       m_oversized   = false;  ///< One arrived too big; likewise, once.
         bool       m_writeFailed = false;  ///< The same, for a send.
+        bool       m_refusedBig  = false;  ///< A send was too big; said once, until close().
         Address    m_local;
 };
 
