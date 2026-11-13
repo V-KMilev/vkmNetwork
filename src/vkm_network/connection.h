@@ -80,7 +80,9 @@ class Connection {
         /**
          * @brief Take a datagram that arrived from this peer.
          *
-         * What rode inside it is the datagram past HEADER_BYTES; the caller reads it there.
+         * What rode inside it is the datagram past HEADER_BYTES; the caller reads it there. Only a
+         * datagram the caller has proven its peer's: one forged far ahead moves the window past every
+         * real one.
          *
          * @param bytes        The whole datagram, header included.
          * @param size         Its length.

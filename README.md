@@ -18,6 +18,9 @@ what a game sends - no message types of its own, no snapshots, no scene - and ru
   connection's header is little-endian, and the library compiles with fused multiply-add off
   (`-ffp-contract=off`, public, so a consumer's own use of the coders rounds alike).
 - **No clock inside.** Time is handed in: `Connection::advance(seconds)`, `JoinCookie::issue(to, now)`.
+- **A connection trusts what it accepts.** A source address is trivially forged, and one datagram
+  numbered far ahead moves the window past every real one, so a caller proves a datagram its peer's -
+  by a token it gave the peer, say - before `Connection::accept`.
 
 ## A connection
 
@@ -34,8 +37,9 @@ peer.frame(payload.data(), payload.size(), datagram);  // the header, then the p
 socket.send(peer.peer(), datagram.data(), datagram.size());
 
 Address from;
-while (socket.receive(datagram, from)) {
+for (int read = 0; read < readsAFrame && socket.receive(datagram, from); ++read) {  // the caller's bound
     std::vector<uint16_t> acknowledged;
+    // ... and proven the peer's, as the conventions say
     if (from == peer.peer() && peer.accept(datagram.data(), datagram.size(), acknowledged)) {
         BitReader in(datagram.data() + Connection::HEADER_BYTES, datagram.size() - Connection::HEADER_BYTES);
         // ... read the payload
