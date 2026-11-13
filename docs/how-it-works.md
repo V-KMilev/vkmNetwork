@@ -30,13 +30,15 @@ measuring the round trip and telling a sender what its peer holds.
 - **A packet older than one already seen is refused**, or a receiver would mix two moments. Sequences
   are 16 bits and wrap: past half the space apart, older is the safe reading (`isNewerSequence`).
 - **Sequence 0 is never sent**, on the first packet or after a wrap, so a header can say "nothing
-  heard" and a peer that has heard nothing acknowledges nothing.
-- **Each acknowledgement is reported once.** The 256 packets sent most recently are remembered until
-  acknowledged, each with its age, so a reported one is timed; one older than that is not.
+  heard" and a peer that has heard nothing acknowledges nothing; a packet numbered with it is refused.
+- **Each acknowledgement is reported at most once.** The 255 packets sent most recently are
+  remembered until acknowledged, each with when it went out, so a reported one is timed; one older
+  than that is neither timed nor reported.
 - **`refuse()` takes back the window the last `accept` moved.** A sender may read an acknowledgement
   as its payload taken, so a payload the receiver could not decode must be un-seen and said again.
 - **The round trip and its variation are smoothed**, a tenth of each new measurement taken, so one
-  packet held in a router's queue barely moves them. Loss counts the gaps in the peer's numbering.
+  packet held in a router's queue barely moves them. Loss counts the gaps in the peer's numbering after
+  the first packet taken, a refused packet among them.
 - **Silence grows by at most `MAX_SILENCE_A_FRAME` an `advance`.** A frame this end spent stalled is
   its own, not the peer's, whose packets wait in the socket; after `TIMEOUT_SECONDS` of silence the
   peer is `timedOut`.

@@ -135,6 +135,75 @@ TEST("a packet older than one already heard is refused, and refuse() takes back 
     CHECK(!took);
 }
 
+TEST("refusing after a refused accept takes back nothing, and a refused packet counts once, as missed") {
+    Connection a;
+    Connection b;
+    openPair(a, b);
+    const std::vector<uint8_t> first  = packet(a);
+    const std::vector<uint8_t> second = packet(a);
+
+    bool took = false;
+    take(b, first, &took);
+    take(b, second, &took);
+    take(b, second, &took);
+    CHECK(!took);
+    b.refuse();
+    take(b, second, &took);
+    CHECK(!took);
+
+    // Of 1 to 4 only 3 is refused: it is a gap the fourth steps over, and nothing else.
+    take(b, packet(a));
+    b.refuse();
+    take(b, packet(a));
+    CHECK_NEAR(b.lossFraction(), 1.0f / 4.0f, 1e-6f);
+}
+
+TEST("loss counts no gap at the wrap, where NO_SEQUENCE is skipped") {
+    Connection a;
+    Connection b;
+    openPair(a, b);
+    for (int i = 0; i < 70000; ++i) take(b, packet(a));
+    CHECK(b.lossFraction() == 0.0f);
+}
+
+TEST("a packet lost a wrap ago times no packet sent since, and reports none twice") {
+    Connection a;
+    Connection b;
+    openPair(a, b);
+    packet(a);  // 1, lost
+    std::vector<uint16_t> reported;
+    for (int i = 0; i < 65545; ++i) {
+        take(b, packet(a));
+        a.advance(0.05f);
+        const std::vector<uint16_t> acknowledged = take(a, packet(b));
+        reported.insert(reported.end(), acknowledged.begin(), acknowledged.end());
+    }
+    CHECK_NEAR(a.roundTrip(), 0.05f, 1e-4f);
+    CHECK(a.roundTripVariation() < 0.01f);
+    // Each packet taken is reported once, in turn: 2 to 65535, then 1 to 11 after the wrap.
+    std::vector<uint16_t> expected;
+    for (uint32_t sequence = 2; sequence <= 65535; ++sequence) {
+        expected.push_back(static_cast<uint16_t>(sequence));
+    }
+    for (uint16_t sequence = 1; sequence <= 11; ++sequence) expected.push_back(sequence);
+    CHECK(reported.size() == expected.size());
+    CHECK(std::equal(reported.begin(), reported.end(), expected.begin(), expected.end()));
+}
+
+TEST("a packet numbered NO_SEQUENCE is refused, and one acknowledging it reports nothing") {
+    Connection b;
+    b.open(Address{0x7F000001u, 2000});
+    bool took = true;
+    take(b, std::vector<uint8_t>(Connection::HEADER_BYTES, 0), &took);
+    CHECK(!took);
+
+    // Sequence 1, acknowledging 5 and, five before it, NO_SEQUENCE, which b never sent.
+    const std::vector<uint8_t> header = {0x01, 0x00, 0x05, 0x00, 0x10, 0x00, 0x00, 0x00};
+    CHECK(take(b, header, &took).empty());
+    CHECK(took);
+    CHECK(b.roundTrip() == 0.0f);
+}
+
 TEST("a reply after a packet 32 past the newest heard acknowledges both, and after one 33 past only that one") {
     Connection a;
     Connection b;
@@ -158,6 +227,23 @@ TEST("a reply after a packet 32 past the newest heard acknowledges both, and aft
     acknowledged = take(c, packet(d));
     std::sort(acknowledged.begin(), acknowledged.end());
     CHECK(acknowledged == (std::vector<uint16_t>{1, 33}));
+}
+
+TEST("a packet is remembered while 254 more go out and not past them, across the wrap too") {
+    // Whether a reply to the packet numbered first, after more go out unheard, still reports it.
+    const auto reported = [](uint16_t first, int more) {
+        Connection a;
+        Connection b;
+        openPair(a, b);
+        while (a.nextSequence() != first) packet(a);
+        take(b, packet(a));
+        for (int i = 0; i < more; ++i) packet(a);
+        return take(a, packet(b)) == std::vector<uint16_t>{first};
+    };
+    for (const uint16_t first : {uint16_t{1000}, uint16_t{65280}, uint16_t{65281}, uint16_t{65535}}) {
+        CHECK(reported(first, 254));
+        CHECK(!reported(first, 255));
+    }
 }
 
 TEST("an end that has heard nothing acknowledges nothing") {

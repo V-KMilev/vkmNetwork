@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
-#include <utility>
 
 #include "vkm_network/little_endian.h"
 
@@ -17,10 +16,6 @@ constexpr float TRIP_SMOOTHING = 0.1f;  ///< How much of a new measurement is ta
 constexpr uint16_t SEQUENCE_HALF = 0x8000;  ///< Half the sequence space: the point past which "newer" stops
                                             ///< being knowable.
 
-constexpr size_t SENT_REMEMBERED = 256;  ///< Packets remembered until acknowledged, so the acknowledgement
-                                         ///< can be timed. Bounded against a peer that never answers;
-                                         ///< anything older is not timed.
-
 } // namespace
 
 bool isNewerSequence(uint16_t a, uint16_t b) {
@@ -28,13 +23,8 @@ bool isNewerSequence(uint16_t a, uint16_t b) {
 }
 
 void Connection::open(const Address& peer) {
-    // The sent list keeps its buffer, so a connection reopened for each new peer allocates nothing.
-    std::vector<Sent> sent = std::move(m_sent);
-    sent.clear();
-
     *this  = Connection{};
     m_peer = peer;
-    m_sent = std::move(sent);
 }
 
 void Connection::frame(const uint8_t* payload, size_t size, std::vector<uint8_t>& out) {
@@ -45,47 +35,42 @@ void Connection::frame(const uint8_t* payload, size_t size, std::vector<uint8_t>
     // On the wrap as well as at the start: NO_SEQUENCE means "nothing heard".
     if (m_outgoing == NO_SEQUENCE) ++m_outgoing;
     writeLittleEndian(&out[0], sequence);
-    writeLittleEndian(&out[2], m_newest);
-    writeLittleEndian(&out[4], m_seen);
+    writeLittleEndian(&out[2], m_window.newest);
+    writeLittleEndian(&out[4], m_window.seen);
     if (size > 0) std::memcpy(&out[HEADER_BYTES], payload, size);
 
-    m_sent.push_back({sequence, 0.0f});
-    if (m_sent.size() > SENT_REMEMBERED) m_sent.erase(m_sent.begin());
+    m_sent[sequence % SENT_REMEMBERED] = {sequence, m_clock};
 }
 
 bool Connection::accept(const uint8_t* bytes, size_t size, std::vector<uint16_t>& acknowledged) {
+    // Kept for refuse(), whether or not this one is taken: marking it seen claims a payload not yet read.
+    m_wasWindow = m_window;
     if (size < HEADER_BYTES) return false;
 
     const auto sequence           = readLittleEndian<uint16_t>(&bytes[0]);
     const auto acknowledgedNewest = readLittleEndian<uint16_t>(&bytes[2]);
     const auto acknowledgedBefore = readLittleEndian<uint32_t>(&bytes[4]);
 
-    if (m_heard && !isNewerSequence(sequence, m_newest)) return false;
+    const bool heard = m_window.newest != NO_SEQUENCE;
+    if (sequence == NO_SEQUENCE || (heard && !isNewerSequence(sequence, m_window.newest))) return false;
 
-    // Kept for refuse(): marking it seen claims a payload not yet read.
-    m_wasNewest = m_newest;
-    m_wasSeen   = m_seen;
-    m_wasHeard  = m_heard;
-
-    if (!m_heard) {
-        m_newest = sequence;
-        m_heard  = true;
-    } else {
+    if (heard) {
         // Shift and mark the old newest; at exactly 32 it is the last bit,
         // past that nothing is knowable. In 64 bits: a 32-bit shift by 32 is UB.
-        const uint16_t advance = static_cast<uint16_t>(sequence - m_newest);
+        const uint16_t advance = static_cast<uint16_t>(sequence - m_window.newest);
 
-        m_missed += advance - 1;
+        // Across the wrap it steps over NO_SEQUENCE, which nothing sent.
+        const uint16_t neverSent = sequence < m_window.newest ? 1 : 0;
+        m_window.missed += advance - 1u - neverSent;
 
-        m_seen = advance > 32
+        m_window.seen = advance > 32
             ? 0u
             : static_cast<uint32_t>(
-                (static_cast<uint64_t>(m_seen) << advance) | (uint64_t{1} << (advance - 1))
+                (static_cast<uint64_t>(m_window.seen) << advance) | (uint64_t{1} << (advance - 1))
             );
-        m_newest = sequence;
     }
-
-    ++m_arrived;
+    m_window.newest = sequence;
+    ++m_window.arrived;
 
     // Nothing acknowledged, window included: timing or reporting it would
     // invent a trip and confirm a packet never received.
@@ -103,22 +88,16 @@ bool Connection::accept(const uint8_t* bytes, size_t size, std::vector<uint16_t>
 }
 
 void Connection::refuse() {
-    m_newest = m_wasNewest;
-    m_seen   = m_wasSeen;
-    m_heard  = m_wasHeard;
+    m_window = m_wasWindow;
 }
 
 void Connection::recordTrip(uint16_t acknowledged, std::vector<uint16_t>& reported) {
-    const auto found = std::find_if(
-        m_sent.begin(),
-        m_sent.end(),
-        [acknowledged](const Sent& s) { return s.sequence == acknowledged; }
-    );
-    // Not found: reported already, or fell out of the window.
-    if (found == m_sent.end()) return;
+    Sent& sent = m_sent[acknowledged % SENT_REMEMBERED];
+    // Not there: never sent, reported already, or its slot taken by a newer one.
+    if (acknowledged == NO_SEQUENCE || sent.sequence != acknowledged) return;
 
-    const float trip = found->age;
-    m_sent.erase(found);
+    const float trip = static_cast<float>(m_clock - sent.sentAt);
+    sent.sequence = NO_SEQUENCE;
     reported.push_back(acknowledged);
 
     if (m_roundTrip <= 0.0f) {
@@ -132,8 +111,8 @@ void Connection::recordTrip(uint16_t acknowledged, std::vector<uint16_t>& report
 }
 
 void Connection::advance(float seconds) {
+    m_clock  += seconds;
     m_silent += std::min(seconds, MAX_SILENCE_A_FRAME);
-    for (Sent& sent : m_sent) sent.age += seconds;
 }
 
 } // namespace Vkm::Network

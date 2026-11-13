@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <vector>
@@ -83,9 +84,9 @@ class Connection {
          *
          * @param bytes        The whole datagram, header included.
          * @param size         Its length.
-         * @param acknowledged Appended with the sequences this datagram confirms, each reported once
-         *                     only.
-         * @return False when it is malformed, or older than one already seen.
+         * @param acknowledged Appended with the sequences this datagram confirms among the 255 this
+         *                     end sent last, each at most once.
+         * @return False when it is malformed, is numbered NO_SEQUENCE, or is older than one already seen.
          */
         bool accept(const uint8_t* bytes, size_t size, std::vector<uint16_t>& acknowledged);
 
@@ -93,12 +94,13 @@ class Connection {
          * @brief Take back the acknowledgement for the packet just accepted.
          *
          * A sender may read an acknowledgement as the payload taken, so a payload
-         * that would not decode is un-seen here, and the sender says it again.
+         * that would not decode is un-seen here, and the sender says it again. After
+         * an accept() that answered false, nothing is taken back.
          */
         void refuse();
 
-        /// Age every unacknowledged packet by @p seconds of wall clock, and the silence timer by as
-        /// much up to MAX_SILENCE_A_FRAME.
+        /// Move this end's clock, which times each trip, on by @p seconds of wall clock, and the silence
+        /// timer by as much up to MAX_SILENCE_A_FRAME.
         void advance(float seconds);
 
         /**
@@ -127,13 +129,14 @@ class Connection {
         /**
          * @brief What fraction of the peer's packets never arrived, so far.
          *
-         * Counted from gaps in its sequence numbering; zero until something arrives.
+         * Counted from gaps in its sequence numbering after the first packet taken, a refused one
+         * among them; zero until something arrives.
          *
          * @return Lost over sent, in [0, 1).
          */
         float lossFraction() const {
-            const uint64_t seen = m_arrived + m_missed;
-            return seen == 0 ? 0.0f : static_cast<float>(m_missed) / static_cast<float>(seen);
+            const uint64_t seen = m_window.arrived + m_window.missed;
+            return seen == 0 ? 0.0f : static_cast<float>(m_window.missed) / static_cast<float>(seen);
         }
 
         /// How much that trip varies, smoothed the same way.
@@ -143,12 +146,28 @@ class Connection {
 
     private:
         /**
+         * @brief What this end has heard of the peer: what accept() moves and refuse() puts back.
+         */
+        struct Window {
+            uint16_t newest  = NO_SEQUENCE;  ///< Newest sequence seen from the peer; NO_SEQUENCE before any.
+            uint32_t seen    = 0;            ///< The thirty-two before it, one bit each.
+            uint64_t arrived = 0;            ///< Packets from the peer that landed.
+            uint64_t missed  = 0;            ///< Gaps its sequence numbering stepped over.
+        };
+
+        /**
          * @brief When one recent packet went out, to time its acknowledgement.
          */
         struct Sent {
-            uint16_t sequence = 0;
-            float    age      = 0.0f;
+            uint16_t sequence = NO_SEQUENCE;  ///< NO_SEQUENCE for a slot that holds none.
+            double   sentAt   = 0.0;          ///< This end's clock when it went out.
         };
+
+        static constexpr size_t SENT_REMEMBERED = 255;  ///< Packets remembered until acknowledged, so the
+                                                        ///< acknowledgement can be timed; each newer one
+                                                        ///< takes the slot of the one this many before it.
+                                                        ///< 255 divides the 65535 sequences sent, so it
+                                                        ///< holds across the wrap too.
 
     private:
         void recordTrip(uint16_t acknowledged, std::vector<uint16_t>& reported);
@@ -157,23 +176,17 @@ class Connection {
         Address m_peer;
 
         uint16_t m_outgoing = NO_SEQUENCE + 1;  ///< Next sequence this end will send.
-        uint16_t m_newest   = 0;                ///< Newest sequence seen from the peer.
-        uint32_t m_seen     = 0;                ///< The thirty-two before it, one bit each.
-        bool     m_heard    = false;
 
-        uint16_t m_wasNewest = 0;  ///< That window before the last accept, for refuse().
-        uint32_t m_wasSeen   = 0;
-        bool     m_wasHeard  = false;
+        Window m_window;
+        Window m_wasWindow;  ///< The window before the last accept, for refuse().
 
-        float m_silent = 0.0f;  ///< Since anything arrived.
-
-        uint64_t m_arrived = 0;  ///< Packets from the peer that landed.
-        uint64_t m_missed  = 0;  ///< Gaps its sequence numbering stepped over.
+        double m_clock  = 0.0;   ///< Seconds advanced since open(): what a trip is timed against.
+        float  m_silent = 0.0f;  ///< Since anything arrived.
 
         float m_roundTrip = 0.0f;
         float m_variation = 0.0f;
 
-        std::vector<Sent> m_sent;
+        std::array<Sent, SENT_REMEMBERED> m_sent;  ///< Each at its sequence modulo SENT_REMEMBERED.
 };
 
 } // namespace Vkm::Network
