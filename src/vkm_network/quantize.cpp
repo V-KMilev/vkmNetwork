@@ -1,7 +1,11 @@
+#define VKM_LOG_CATEGORY "NET"
+
 #include "vkm_network/quantize.h"
 
 #include <algorithm>
 #include <cmath>
+
+#include "vkm_log/assert.h"
 
 namespace Vkm::Network {
 
@@ -15,10 +19,11 @@ constexpr float ROTATION_RANGE = 0.70710678f;  ///< Range of a quaternion compon
  *
  * One fewer than half the codes, so a middle code is exactly zero.
  *
- * @param width Bits.
+ * @param width Bits, 2 to 32.
  * @return Steps on each side of the zero code.
  */
-constexpr int32_t signedLevels(uint32_t width) {
+int32_t signedLevels(uint32_t width) {
+    VKM_ASSERT(width >= 2 && width <= 32, "a signed field is 2 to 32 bits, not %u", width);
     return static_cast<int32_t>((1u << (width - 1u)) - 1u);
 }
 
@@ -44,6 +49,7 @@ float fromSigned(uint32_t raw, float range, uint32_t width) {
 }
 
 uint32_t toFixed(float value, float low, float step, uint32_t width) {
+    VKM_ASSERT(width >= 1 && width <= 32, "a fixed-point field is 1 to 32 bits, not %u", width);
     const float  offset = (value - low) / step;
     const double top    = static_cast<double>((1ull << width) - 1ull);
     if (!(offset > 0.0f)) return 0;  // NaN too: converted, it is undefined.

@@ -1,8 +1,12 @@
+#define VKM_LOG_CATEGORY "NET"
+
 #include "vkm_network/connection.h"
 
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+
+#include "vkm_log/assert.h"
 
 #include "vkm_network/little_endian.h"
 
@@ -111,6 +115,7 @@ void Connection::recordTrip(uint16_t acknowledged, std::vector<uint16_t>& report
 }
 
 void Connection::advance(float seconds) {
+    VKM_ASSERT(seconds >= 0.0f, "a connection advances by a time of zero or more, not %f", seconds);
     m_clock  += seconds;
     m_silent += std::min(seconds, MAX_SILENCE_A_FRAME);
 }

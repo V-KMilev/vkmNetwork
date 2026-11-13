@@ -13,6 +13,7 @@
 #include "vkm_network/quantize.h"
 
 #include "harness/check.h"
+#include "harness/scratch.h"
 
 namespace {
 
@@ -219,4 +220,11 @@ TEST("a consumer's arithmetic is not fused, as the coders' is not") {
     volatile float b = 1.0f + 0x1p-12f;
     volatile float c = -(1.0f + 0x1p-11f);
     CHECK(multiplyAdd(a, b, c) == 0.0f);
+}
+
+TEST("with the library's asserts on, a broken precondition stops the program") {
+    if (!VKM_TEST_LIBRARY_ASSERTS) Vkm::Test::skip("the library's asserts are off in this build");
+    // A signed field is 2 to 32 bits.
+    const Vkm::Test::Ended ended = Vkm::Test::inChild([] { (void)toSigned(1.0f, 1.0f, 33); });
+    CHECK(ended == Vkm::Test::Ended::Stopped);
 }

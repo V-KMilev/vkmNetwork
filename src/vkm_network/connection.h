@@ -99,8 +99,8 @@ class Connection {
          */
         void refuse();
 
-        /// Move this end's clock, which times each trip, on by @p seconds of wall clock, and the silence
-        /// timer by as much up to MAX_SILENCE_A_FRAME.
+        /// Move this end's clock, which times each trip, on by @p seconds of wall clock, at least zero,
+        /// and the silence timer by as much up to MAX_SILENCE_A_FRAME.
         void advance(float seconds);
 
         /**

@@ -52,7 +52,7 @@ class JoinCookie {
          * @brief The token for @p to, as of @p now.
          *
          * @param to  The address that asked.
-         * @param now Seconds on a clock that only moves forward.
+         * @param now Seconds, zero or more, on a clock that only moves forward.
          * @return The token.
          */
         uint64_t issue(const Address& to, double now) const;

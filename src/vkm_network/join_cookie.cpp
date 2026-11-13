@@ -1,6 +1,10 @@
+#define VKM_LOG_CATEGORY "NET"
+
 #include "vkm_network/join_cookie.h"
 
 #include <random>
+
+#include "vkm_log/assert.h"
 
 #include "vkm_network/little_endian.h"
 
@@ -74,10 +78,12 @@ void JoinCookie::rekey() {
 }
 
 uint64_t JoinCookie::issue(const Address& to, double now) const {
+    VKM_ASSERT(now >= 0.0, "a join cookie's clock reads zero or more, not %f", now);
     return forWindow(to, static_cast<uint64_t>(now / WINDOW_SECONDS));
 }
 
 bool JoinCookie::accepts(const Address& from, uint64_t token, double now) const {
+    VKM_ASSERT(now >= 0.0, "a join cookie's clock reads zero or more, not %f", now);
     const uint64_t window = static_cast<uint64_t>(now / WINDOW_SECONDS);
     return token == forWindow(from, window)
         || (window > 0 && token == forWindow(from, window - 1));

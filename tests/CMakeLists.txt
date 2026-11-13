@@ -11,7 +11,12 @@ target_link_libraries(vkm_network_tests PRIVATE ${PROJECT_NAME})
 # Beside vkm_log, where Windows looks for the DLL a program needs.
 set_target_properties(vkm_network_tests PROPERTIES RUNTIME_OUTPUT_DIRECTORY $<TARGET_FILE_DIR:vkm_log>)
 target_include_directories(vkm_network_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-target_compile_definitions(vkm_network_tests PRIVATE VKM_TEST_SUITE="vkm_network" VKM_TEST_LOG)
+target_compile_definitions(vkm_network_tests PRIVATE
+    VKM_TEST_SUITE="vkm_network"
+    VKM_TEST_LOG
+    # The library's asserts flag, which check.h's VKM_TEST_LIBRARY_ASSERTS reads beside the file's NDEBUG.
+    VKM_TEST_ASSERTS_FLAG=$<BOOL:${VKM_NETWORK_ASSERTS}>
+)
 target_compile_options(vkm_network_tests PRIVATE
     $<$<CXX_COMPILER_ID:GNU,Clang>:${_vkm_network_warnings}>
     $<$<CXX_COMPILER_ID:Clang>:-Werror=documentation>
