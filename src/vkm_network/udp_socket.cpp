@@ -17,10 +17,6 @@
         #define SIO_UDP_CONNRESET _WSAIOW(IOC_VENDOR, 12)
     #endif
     using NativeSocket = SOCKET;
-
-    #define VKM_CLOSE_SOCKET closesocket
-    #define VKM_WOULD_BLOCK  (WSAGetLastError() == WSAEWOULDBLOCK)
-    #define VKM_MSG_TOO_LONG (WSAGetLastError() == WSAEMSGSIZE)
 #else
     #include <arpa/inet.h>
     #include <errno.h>
@@ -29,23 +25,35 @@
     #include <sys/socket.h>
     #include <unistd.h>
     using NativeSocket = int;
-    #define VKM_CLOSE_SOCKET ::close
-    #define VKM_WOULD_BLOCK  (errno == EAGAIN || errno == EWOULDBLOCK)
-    #define VKM_MSG_TOO_LONG (errno == EMSGSIZE)
 #endif
 
 namespace Vkm::Network {
 
 namespace {
 
+/// Close a socket this file opened.
+void closeSocket(NativeSocket handle);
+
+/// Whether the call that just failed only found nothing waiting.
+bool wouldBlock();
+
+/// Whether the read that just failed met a datagram too big for its buffer.
+bool messageTooLong();
+
 /// What the system said of the call that just failed.
-std::string lastError() {
+std::string lastError();
+
 #if defined(_WIN32)
-    return "Winsock error " + std::to_string(WSAGetLastError());
+void closeSocket(NativeSocket handle) { closesocket(handle); }
+bool wouldBlock() { return WSAGetLastError() == WSAEWOULDBLOCK; }
+bool messageTooLong() { return WSAGetLastError() == WSAEMSGSIZE; }
+std::string lastError() { return "Winsock error " + std::to_string(WSAGetLastError()); }
 #else
-    return std::strerror(errno);
+void closeSocket(NativeSocket handle) { ::close(handle); }
+bool wouldBlock() { return errno == EAGAIN || errno == EWOULDBLOCK; }
+bool messageTooLong() { return errno == EMSGSIZE; }
+std::string lastError() { return std::strerror(errno); }
 #endif
-}
 
 sockaddr_in toSockaddr(const Address& address) {
     sockaddr_in out{};
@@ -78,7 +86,7 @@ bool UdpSocket::open(uint16_t port) {
 
     if (::bind(handle, reinterpret_cast<sockaddr*>(&local), sizeof(local)) != 0) {
         LOG_ERROR("Could not bind port %u: %s", port, lastError().c_str());
-        VKM_CLOSE_SOCKET(handle);
+        closeSocket(handle);
         return false;
     }
 
@@ -117,7 +125,7 @@ bool UdpSocket::open(uint16_t port) {
             "A UDP socket would not go non-blocking (%s), and a blocking one would stall the frame",
             lastError().c_str()
         );
-        VKM_CLOSE_SOCKET(handle);
+        closeSocket(handle);
         return false;
     }
 
@@ -137,7 +145,7 @@ bool UdpSocket::open(uint16_t port) {
 void UdpSocket::close() {
     if (m_handle == INVALID) return;
 
-    VKM_CLOSE_SOCKET(static_cast<NativeSocket>(m_handle));
+    closeSocket(static_cast<NativeSocket>(m_handle));
     m_handle      = INVALID;
     m_local       = {};
     m_readFailed  = false;
@@ -222,10 +230,10 @@ bool UdpSocket::receive(std::vector<uint8_t>& out, Address& from) {
     );
 
     // Windows reports an oversized datagram as an error, POSIX truncates it.
-    const bool oversized = read < 0 ? VKM_MSG_TOO_LONG : static_cast<size_t>(read) > MAX_DATAGRAM;
+    const bool oversized = read < 0 ? messageTooLong() : static_cast<size_t>(read) > MAX_DATAGRAM;
     if (read < 0 && !oversized) {
         // Nothing waiting is not a failure; anything else is said once.
-        if (!VKM_WOULD_BLOCK && !m_readFailed) {
+        if (!wouldBlock() && !m_readFailed) {
             m_readFailed = true;
             LOG_WARNING(
                 "A UDP read failed (%s); further failures on this socket are not repeated until one succeeds",
