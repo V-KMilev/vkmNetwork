@@ -131,8 +131,8 @@ bool UdpSocket::open(uint16_t port) {
 
     // Asked back: a caller that passed zero wants the port the system chose.
     sockaddr_in bound{};
-    socklen_t   boundSize = sizeof(bound);
-    const bool boundKnown = ::getsockname(handle, reinterpret_cast<sockaddr*>(&bound), &boundSize) == 0;
+    socklen_t   boundSize  = sizeof(bound);
+    const bool  boundKnown = ::getsockname(handle, reinterpret_cast<sockaddr*>(&bound), &boundSize) == 0;
     m_local.port = boundKnown ? ntohs(bound.sin_port) : port;
 
     // getsockname answers 0.0.0.0, which nothing can connect to.

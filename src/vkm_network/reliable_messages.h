@@ -13,8 +13,8 @@ namespace Vkm::Network {
 constexpr size_t MAX_MESSAGE_BYTES = 255;  ///< Longest message: its length goes on the wire in a byte.
 
 constexpr size_t MESSAGE_WINDOW = 64;  ///< Most messages a sender holds unacknowledged; a send past it is
-                                           ///< refused. Small against the sixteen-bit sequence, so a
-                                           ///< cumulative acknowledgement is never ambiguous.
+                                       ///< refused. Small against the sixteen-bit sequence, so a
+                                       ///< cumulative acknowledgement is never ambiguous.
 
 /**
  * @brief The sending half of messages that must arrive: once each, in the order sent.
