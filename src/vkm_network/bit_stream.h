@@ -46,11 +46,11 @@ class BitWriter {
          * @brief Write the low @p width bits of @p value.
          *
          * @param value Value to write; bits above @p width are ignored.
-         * @param width 1 to 32.
+         * @param width 1 to 32; 0 writes nothing, and past 32 is refused as an overflow is.
          */
         void bits(uint32_t value, uint32_t width) {
-            if (width == 0 || width > 32) return;
-            if (m_bit + width > m_capacity * 8u) {
+            if (width == 0) return;
+            if (width > 32 || m_bit + width > m_capacity * 8u) {
                 m_overflowed = true;
                 return;
             }
@@ -155,9 +155,15 @@ class BitReader {
         BitReader& operator=(BitReader && other) = delete;
 
     public:
+        /**
+         * @brief Read the next @p width bits.
+         *
+         * @param width 1 to 32; 0 reads nothing, and past 32 fails as a read past the end does.
+         * @return The bits, low first; zero once the reader has failed.
+         */
         uint32_t bits(uint32_t width) {
-            if (width == 0 || width > 32) return 0;
-            if (m_failed || m_bit + width > m_size * 8u) {
+            if (width == 0) return 0;
+            if (width > 32 || m_failed || m_bit + width > m_size * 8u) {
                 m_failed = true;
                 return 0;
             }

@@ -136,6 +136,20 @@ TEST("a write past the capacity is refused and the overflow stays said, and a re
     CHECK(part.failed());
 }
 
+TEST("a field wider than 32 bits is refused: the writer says it overflowed and the reader that it failed") {
+    std::vector<uint8_t> bytes;
+    BitWriter            out(bytes, 16);
+    out.bits(0x5u, 3);
+    out.bits(0x1u, 33);
+    CHECK(out.overflowed());
+    out.finish();
+
+    const uint8_t data[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+    BitReader     in(data, sizeof(data));
+    CHECK(in.bits(33) == 0u);
+    CHECK(in.failed());
+}
+
 TEST("bits appended from another stream, whole bytes and a part of one, read back in place") {
     std::vector<uint8_t> encoded;
     BitWriter            first(encoded, 8);
