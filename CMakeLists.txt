@@ -61,10 +61,7 @@ endif()
 set(_vkm_network_warnings
     -Wall
     -Wextra
-    -Wno-unused-parameter
     -Wshadow
-    -Wunused-variable
-    -Wunused-value
     -Wformat=2
     -Wnon-virtual-dtor
     -Woverloaded-virtual
