@@ -27,8 +27,8 @@ uint64_t sipHash24(uint64_t k0, uint64_t k1, const uint8_t* data, size_t size);
  *
  * Stateless - a keyed hash of the address and the time window - so a forged
  * request costs a hash and a reply no larger, and crowds out no real join.
- * Accepted for its window and the next. The key comes from the operating
- * system, so tokens cannot be predicted and a restart voids them.
+ * Accepted for its window and the next. The key is drawn from the operating
+ * system when the cookie is made, so tokens cannot be predicted and a restart voids them.
  */
 class JoinCookie {
     public:
@@ -36,7 +36,7 @@ class JoinCookie {
                                                         ///< good for one to two of them.
 
     public:
-        JoinCookie() = default;
+        JoinCookie();
         ~JoinCookie() = default;
 
         JoinCookie(const JoinCookie& other) = default;

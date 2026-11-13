@@ -54,6 +54,14 @@ TEST("a join token is taken back from its address for one to two windows, and fr
     CHECK(!cookie.accepts(client, late, 12.0 * window));
 }
 
+TEST("a cookie draws its own key when it is made: two give one address different tokens") {
+    const Address    client{0x7F000001u, 4242};
+    const JoinCookie first;
+    const JoinCookie second;
+    CHECK(first.issue(client, 5.0) != second.issue(client, 5.0));
+    CHECK(!second.accepts(client, first.issue(client, 5.0), 5.0));
+}
+
 TEST("rekey voids every token given before") {
     JoinCookie cookie;
     const Address  client{0x7F000001u, 4242};
