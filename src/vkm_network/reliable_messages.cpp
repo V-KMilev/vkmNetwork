@@ -1,5 +1,7 @@
 #include "vkm_network/reliable_messages.h"
 
+#include <array>
+
 #include "vkm_network/connection.h"
 
 namespace Vkm::Network {
@@ -37,7 +39,7 @@ size_t Outbox::write(BitWriter& out, size_t budgetBits) const {
     size_t used  = HEADER_BITS;
     for (const Message& message : m_pending) {
         const size_t cost = LENGTH_BITS + 8u * message.bytes.size();
-        if (count == MAX_PER_PACKET || used + cost > budgetBits) break;
+        if (used + cost > budgetBits) break;
         used += cost;
         ++count;
     }
@@ -57,7 +59,7 @@ size_t Outbox::write(BitWriter& out, size_t budgetBits) const {
 void Outbox::acknowledge(uint16_t newest) {
     while (!m_pending.empty()) {
         const uint16_t front = m_pending.front().sequence;
-        if (front != newest && isNewerSequence(front, newest)) break;
+        if (isNewerSequence(front, newest)) break;
         m_pending.pop_front();
     }
 }
@@ -73,11 +75,11 @@ bool Inbox::read(BitReader& in, const Deliver& deliver) {
     const uint32_t count = in.bits(COUNT_BITS);
     if (in.failed()) return false;
 
-    std::vector<uint8_t> bytes;
+    // As long as a length field says: read per packet, so it takes no allocation.
+    std::array<uint8_t, (1u << LENGTH_BITS) - 1> bytes;
     for (uint32_t i = 0; i < count; ++i) {
         const uint32_t size = in.bits(LENGTH_BITS);
         if (in.failed() || size == 0) return false;
-        bytes.resize(size);
         for (uint32_t b = 0; b < size; ++b) bytes[b] = in.u8();
         if (in.failed()) return false;
 
@@ -86,7 +88,7 @@ bool Inbox::read(BitReader& in, const Deliver& deliver) {
         if (sequence == nextSequence(m_newest) && m_room > 0) {
             m_newest = sequence;
             --m_room;
-            deliver(bytes.data(), bytes.size());
+            deliver(bytes.data(), size);
         }
         sequence = nextSequence(sequence);
     }

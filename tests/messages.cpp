@@ -9,6 +9,7 @@
 #include "vkm_network/udp_socket.h"
 
 #include "harness/check.h"
+#include "harness/scratch.h"
 
 namespace {
 
@@ -188,6 +189,25 @@ TEST("the inbox hands on at most MESSAGE_WINDOW between two acknowledgements") {
     const std::vector<Message> next = deliver(inbox, packetFrom(outbox));
     CHECK(next.size() == MESSAGE_WINDOW);
     CHECK(next.front() == messageOf(100, 2));
+}
+
+TEST("the inbox reads a packet of messages without allocating") {
+    Outbox outbox;
+    for (uint32_t i = 1; i <= 8; ++i) {
+        const Message message = messageOf(i, 200);
+        REQUIRE(outbox.push(message.data(), message.size()));
+    }
+    const std::vector<uint8_t> packet = packetFrom(outbox);
+
+    Inbox inbox;
+    size_t handed = 0;
+    const Inbox::Deliver count = [&](const uint8_t*, size_t) { ++handed; };
+    BitReader in(packet.data(), packet.size());
+
+    const uint64_t before = Vkm::Test::allocations();
+    CHECK(inbox.read(in, count));
+    CHECK(Vkm::Test::allocations() == before);
+    CHECK(handed > 0u);
 }
 
 TEST("clear forgets every message and numbers the next from the start") {
