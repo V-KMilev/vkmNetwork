@@ -93,13 +93,13 @@ class UdpSocket {
         void noteOversized();
 
     private:
-        intptr_t   m_handle = INVALID;
+        intptr_t m_handle = INVALID;
 
-        bool       m_readFailed  = false;  ///< A read failed; say so once, not per frame.
-        bool       m_oversized   = false;  ///< One arrived too big; likewise, once.
-        bool       m_writeFailed = false;  ///< The same, for a send.
-        bool       m_refusedBig  = false;  ///< A send was too big; said once, until close().
-        Address    m_local;
+        bool     m_readFailed  = false;  ///< A read failed; say so once, not per frame.
+        bool     m_oversized   = false;  ///< One arrived too big; likewise, once.
+        bool     m_writeFailed = false;  ///< The same, for a send.
+        bool     m_refusedBig  = false;  ///< A send was too big; said once, until close().
+        Address  m_local;
 };
 
 } // namespace Vkm::Network

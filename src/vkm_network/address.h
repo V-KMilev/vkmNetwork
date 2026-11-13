@@ -11,7 +11,7 @@ namespace Vkm::Network {
  * Host byte order; converted at the socket.
  */
 struct Address {
-    uint32_t ipv4 = 0;   ///< Host byte order: 0x7F000001 is 127.0.0.1.
+    uint32_t ipv4 = 0;  ///< Host byte order: 0x7F000001 is 127.0.0.1.
     uint16_t port = 0;
 
     /// True when this names somewhere - a zero address is the null one.
