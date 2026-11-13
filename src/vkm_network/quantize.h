@@ -30,7 +30,7 @@ float fromSigned(uint32_t raw, float range, uint32_t width);
  * @brief The code for @p value on a grid of @p step from @p low, @p width bits wide.
  *
  * Rounded to the nearest step; below @p low is the first code and past the
- * last the width holds is the last.
+ * last the width holds is the last. NaN is the first code.
  *
  * @param value The value to quantize.
  * @param low   The value the first code stands for.

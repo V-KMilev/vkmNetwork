@@ -89,7 +89,7 @@ TEST("a signed code reads back within half a step, and a corrupt one inside the 
     CHECK(fromSigned(0xFFFFFFFFu, range, 32) >= -range);
 }
 
-TEST("a fixed-point code rounds to the nearest step and is clamped at both ends") {
+TEST("a fixed-point code rounds to the nearest step, is clamped at both ends, and NaN is the first code") {
     const float low  = -4.0f;
     const float step = 0.25f;
     CHECK(toFixed(low, low, step, 8) == 0u);
@@ -100,6 +100,8 @@ TEST("a fixed-point code rounds to the nearest step and is clamped at both ends"
     CHECK(toFixed(low + 1000.0f, low, step, 8) == 255u);
     CHECK(toFixed(std::numeric_limits<float>::infinity(), low, step, 8) == 255u);
     CHECK(toFixed(1e30f, low, step, 32) == 0xFFFFFFFFu);
+    CHECK(toFixed(std::numeric_limits<float>::quiet_NaN(), low, step, 8) == 0u);
+    CHECK(toFixed(std::numeric_limits<float>::quiet_NaN(), low, step, 32) == 0u);
     CHECK(fromFixed(0u, low, step) == low);
     CHECK(fromFixed(3u, low, step) == low + 0.75f);
     CHECK(fromFixed(255u, low, step) == low + 63.75f);
