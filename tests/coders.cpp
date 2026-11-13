@@ -103,6 +103,7 @@ TEST("a fixed-point code rounds to the nearest step, is clamped at both ends, an
     CHECK(toFixed(1e30f, low, step, 32) == 0xFFFFFFFFu);
     CHECK(toFixed(std::numeric_limits<float>::quiet_NaN(), low, step, 8) == 0u);
     CHECK(toFixed(std::numeric_limits<float>::quiet_NaN(), low, step, 32) == 0u);
+    CHECK(toFixed(0.49999997f, 0.0f, 1.0f, 8) == 0u);
     CHECK(fromFixed(0u, low, step) == low);
     CHECK(fromFixed(3u, low, step) == low + 0.75f);
     CHECK(fromFixed(255u, low, step) == low + 63.75f);
@@ -206,6 +207,14 @@ TEST("fixed values and rotations at fixed widths encode to fixed bytes") {
         0xDE, 0xC4, 0xFF, 0xFE, 0x07,
     };
     CHECK(bytes == expected);
+}
+
+TEST("a fixed-point code is the nearest step past 2^23 steps too, where a float holds no half") {
+    int wrong = 0;
+    for (uint32_t code = (1u << 23) + 1u; code < (1u << 23) + 64u; ++code) {
+        if (toFixed(static_cast<float>(code), 0.0f, 1.0f, 24) != code) ++wrong;
+    }
+    CHECK(wrong == 0);
 }
 
 TEST("a consumer's arithmetic is not fused, as the coders' is not") {

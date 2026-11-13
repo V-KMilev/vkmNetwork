@@ -54,7 +54,8 @@ uint32_t toFixed(float value, float low, float step, uint32_t width) {
     const double top    = static_cast<double>((1ull << width) - 1ull);
     if (!(offset > 0.0f)) return 0;  // NaN too: converted, it is undefined.
     if (static_cast<double>(offset) >= top) return static_cast<uint32_t>(top);
-    return static_cast<uint32_t>(offset + 0.5f);
+    // Rounded whole: past 2^23 a float holds no half, so adding one would round to even.
+    return static_cast<uint32_t>(std::llround(offset));
 }
 
 float fromFixed(uint32_t raw, float low, float step) {
