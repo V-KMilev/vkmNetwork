@@ -1,7 +1,7 @@
 # vkmNetwork
 
 A UDP transport for a game: a non-blocking socket and an IPv4 address; a connection that sequences,
-acknowledges, times the round trip, counts loss and refuses what is older than what it has seen;
+acknowledges, times the round trip, counts loss and refuses what is no newer than what it has seen;
 messages that arrive once and in order, riding a packet's spare room; a stateless join token; a bit
 stream; and the coders that turn a float into bits the same way on every machine. It knows nothing of
 what a game sends - no message types of its own, no snapshots, no scene - and runs on no thread of its own.

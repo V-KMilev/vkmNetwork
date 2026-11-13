@@ -10,12 +10,13 @@ namespace Vkm::Network {
 /**
  * @brief SipHash-2-4 of @p size bytes, under the 128-bit key (@p k0, @p k1).
  *
- * A MAC: without the key, one output says nothing of another.
+ * A MAC: without the key, one output says nothing of another. An unkeyed hash such as FNV-1a can be
+ * steered by whoever picks the input, so it never stands in for this.
  *
  * @param k0   First half of the key, as SipHash reads its bytes 0 to 7.
  * @param k1   Second half, bytes 8 to 15.
  * @param data Bytes to hash.
- * @param size Byte count.
+ * @param size Bytes of @p data, any count, zero included.
  * @return The 64-bit tag.
  */
 uint64_t sipHash24(uint64_t k0, uint64_t k1, const uint8_t* data, size_t size);
@@ -53,7 +54,7 @@ class JoinCookie {
          *
          * @param to  The address that asked.
          * @param now Seconds, zero or more, on a clock that only moves forward.
-         * @return The token.
+         * @return The token, for the reply to carry and the address to echo.
          */
         uint64_t issue(const Address& to, double now) const;
 

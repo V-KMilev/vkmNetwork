@@ -27,8 +27,9 @@ sequence, the newest sequence heard from the peer, and a bitfield of the 32 befo
 retransmitted**: a sender says again, newer, whatever still matters. What an acknowledgement is for is
 measuring the round trip and telling a sender what its peer holds.
 
-- **A packet older than one already seen is refused**, or a receiver would mix two moments. Sequences
-  are 16 bits and wrap: past half the space apart, older is the safe reading (`isNewerSequence`).
+- **A packet no newer than one already seen is refused**, a copy too, or a receiver would mix two
+  moments. Sequences are 16 bits and wrap: past half the space apart, older is the safe reading
+  (`isNewerSequence`).
 - **Sequence 0 is never sent**, on the first packet or after a wrap, so a header can say "nothing
   heard" and a peer that has heard nothing acknowledges nothing; a packet numbered with it is refused.
 - **Each acknowledgement is reported at most once.** The 255 packets sent most recently are
@@ -46,10 +47,10 @@ measuring the round trip and telling a sender what its peer holds.
 ## Messages: once, in order
 
 `Outbox` numbers each message and keeps it until the other end says it has every one up to it. Every
-packet carries every message kept that fits its spare room, oldest first: a message rides each packet
-until one arrives - redundancy, not a retransmit timer. `Inbox` hands on only the next in order; a copy
-is skipped, and one past a gap waits for the sender to say it again, which it does, as it starts from
-what is unacknowledged.
+packet carries the oldest messages kept, as many as fit its spare room in order: a message rides each
+packet until it is acknowledged - redundancy, not a retransmit timer. `Inbox` hands on only the next
+in order; a copy is skipped, and one past a gap waits for the sender to say it again, which it does,
+as it starts from what is unacknowledged.
 
 - A message is 1 to `MAX_MESSAGE_BYTES` (255) bytes, its length a byte on the wire.
 - At most `MESSAGE_WINDOW` (64) wait unacknowledged; a push past it is refused, and the caller decides
@@ -75,7 +76,7 @@ sets a sticky overflow and writes nothing, a read past the end a sticky failure 
 caller asks once at the end.
 
 The coders turn floats into codes the same way on every machine: they use only what IEEE 754 rounds
-exactly (+, -, *, /, `sqrt`, `lround`, comparisons), and the library compiles with fused multiply-add
+exactly (+, -, *, /, `sqrt`, `llround`, comparisons), and the library compiles with fused multiply-add
 off. Two of their properties are load-bearing:
 
 - **Zero is exact for every signed field** (`toSigned`). Off by half a step, a rotation tilts, a body

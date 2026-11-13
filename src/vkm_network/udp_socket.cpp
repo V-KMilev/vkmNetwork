@@ -158,7 +158,7 @@ bool UdpSocket::send(const Address& to, const uint8_t* bytes, size_t size) {
     if (m_handle == INVALID || !to || !bytes || size == 0) return false;
 
     if (size > MAX_DATAGRAM) {
-        // Once a socket, as a failed write: a caller that builds one too big builds every one too big.
+        // Said once a socket, until close(), not at the rate the caller sends.
         if (!m_refusedBig) {
             m_refusedBig = true;
             LOG_ERROR(
@@ -215,7 +215,7 @@ bool UdpSocket::receive(std::vector<uint8_t>& out, Address& from) {
     out.clear();
     if (m_handle == INVALID) return false;
 
-    // One byte of headroom, so an oversized datagram is seen, not truncated.
+    // One byte of headroom, so a datagram cut to fit is told from one that fits.
     uint8_t     buffer[MAX_DATAGRAM + 1];
     sockaddr_in sender{};
     socklen_t senderSize = sizeof(sender);

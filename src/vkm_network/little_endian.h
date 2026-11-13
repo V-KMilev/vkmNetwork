@@ -11,7 +11,7 @@ namespace Vkm::Network {
  *
  * @tparam T  The integer's type: its size is how many bytes are read.
  * @param  at The first byte; the caller has checked the rest are there.
- * @return The value.
+ * @return The integer, the same on every machine.
  */
 template <typename T>
 constexpr T readLittleEndian(const uint8_t* at) {
@@ -26,7 +26,7 @@ constexpr T readLittleEndian(const uint8_t* at) {
  *
  * @tparam T     The integer's type: its size is how many bytes are written.
  * @param  at    The first byte; the caller has room for sizeof(T).
- * @param  value The value.
+ * @param  value Any value of @p T.
  */
 template <typename T>
 constexpr void writeLittleEndian(uint8_t* at, T value) {

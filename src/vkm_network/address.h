@@ -14,7 +14,7 @@ struct Address {
     uint32_t ipv4 = 0;  ///< Host byte order: 0x7F000001 is 127.0.0.1.
     uint16_t port = 0;
 
-    /// True when this names somewhere - a zero address is the null one.
+    /// True when this names somewhere: one with no host or no port is the null one.
     explicit operator bool() const { return ipv4 != 0 && port != 0; }
 
     bool operator==(const Address& other) const {

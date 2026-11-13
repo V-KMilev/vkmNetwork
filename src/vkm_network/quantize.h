@@ -16,7 +16,7 @@ namespace Vkm::Network {
  * Zero must be exact: off by half a step, a rotation tilts, a body at rest
  * drifts and a stick creeps. Past the range a value is clamped; NaN is zero.
  *
- * @param value The value to quantize.
+ * @param value Any float, infinities and NaN included.
  * @param range Magnitude spanned either side of zero.
  * @param width Bits, 2 to 32.
  * @return The code, ready for BitWriter::bits with @p width.
@@ -32,7 +32,7 @@ float fromSigned(uint32_t raw, float range, uint32_t width);
  * Rounded to the nearest step; below @p low is the first code and past the
  * last the width holds is the last. NaN is the first code.
  *
- * @param value The value to quantize.
+ * @param value Any float, infinities and NaN included.
  * @param low   The value the first code stands for.
  * @param step  How far apart two codes are.
  * @param width Bits, 1 to 32.

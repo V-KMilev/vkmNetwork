@@ -51,8 +51,8 @@ class UdpSocket {
          * @param to    Where it goes.
          * @param bytes The payload.
          * @param size  Payload length in bytes.
-         * @return False when there is no socket, nowhere to send, it will not
-         *         fit, or the send failed.
+         * @return False when there is no socket, nothing or nowhere to send, it
+         *         will not fit, or the send failed.
          */
         bool send(const Address& to, const uint8_t* bytes, size_t size);
 
@@ -64,7 +64,8 @@ class UdpSocket {
          *
          * @param out  Filled with the payload; cleared first.
          * @param from Filled with where it came from.
-         * @return False when nothing is waiting, which is not an error.
+         * @return False when nothing is waiting, which is not an error, when the
+         *         socket is not open, or when the read failed, which is logged.
          */
         [[nodiscard]] bool receive(std::vector<uint8_t>& out, Address& from);
 
@@ -86,9 +87,9 @@ class UdpSocket {
 
     private:
         /**
-         * @brief Say once that a datagram was too big to be ours, and drop it.
+         * @brief Say once that a datagram arrived too big to be ours; receive() drops it.
          *
-         * Neither platform reports the true size, so the log cannot either.
+         * The log gives no size: the read takes one byte past the limit, and Windows fails it.
          */
         void noteOversized();
 

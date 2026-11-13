@@ -28,8 +28,8 @@ bool isNewerSequence(uint16_t a, uint16_t b);
  * bitfield of the thirty-two before that.
  *
  * Nothing is retransmitted: the next packet says it again, newer.
- * Acknowledgement measures the trip and what a peer holds. A packet older than
- * one already seen is refused, or the receiver would mix two moments.
+ * Acknowledgement measures the trip and what a peer holds. A packet no newer
+ * than one already seen is refused, or the receiver would mix two moments.
  */
 class Connection {
     public:
@@ -72,7 +72,7 @@ class Connection {
          * The caller owns the socket, which serves every peer of a server.
          *
          * @param payload What to carry; may be empty, which is a keep-alive.
-         * @param size    Its length.
+         * @param size    Its length, at most MAX_PAYLOAD for a datagram the socket will send.
          * @param out     Filled with header followed by payload.
          */
         void frame(const uint8_t* payload, size_t size, std::vector<uint8_t>& out);
@@ -85,10 +85,11 @@ class Connection {
          * real one.
          *
          * @param bytes        The whole datagram, header included.
-         * @param size         Its length.
+         * @param size         Its length; under HEADER_BYTES it is refused.
          * @param acknowledged Appended with the sequences this datagram confirms among the 255 this
          *                     end sent last, each at most once.
-         * @return False when it is malformed, is numbered NO_SEQUENCE, or is older than one already seen.
+         * @return False when it is malformed, is numbered NO_SEQUENCE, or is no newer than one
+         *         already seen.
          */
         bool accept(const uint8_t* bytes, size_t size, std::vector<uint16_t>& acknowledged);
 
@@ -141,7 +142,7 @@ class Connection {
             return seen == 0 ? 0.0f : static_cast<float>(m_window.missed) / static_cast<float>(seen);
         }
 
-        /// How much that trip varies, smoothed the same way.
+        /// How much the round trip varies, in seconds, smoothed the same way.
         float roundTripVariation() const { return m_variation; }
 
         const Address& peer() const { return m_peer; }
@@ -153,8 +154,8 @@ class Connection {
         struct Window {
             uint16_t newest  = NO_SEQUENCE;  ///< Newest sequence seen from the peer; NO_SEQUENCE before any.
             uint32_t seen    = 0;            ///< The thirty-two before it, one bit each.
-            uint64_t arrived = 0;            ///< Packets from the peer that landed.
-            uint64_t missed  = 0;            ///< Gaps its sequence numbering stepped over.
+            uint64_t arrived = 0;            ///< Packets from the peer taken and not refused.
+            uint64_t missed  = 0;            ///< Sequences its numbering stepped over, never taken.
         };
 
         /**
@@ -183,7 +184,7 @@ class Connection {
         Window m_wasWindow;  ///< The window before the last accept, for refuse().
 
         double m_clock  = 0.0;   ///< Seconds advanced since open(): what a trip is timed against.
-        float  m_silent = 0.0f;  ///< Since anything arrived.
+        float  m_silent = 0.0f;  ///< Seconds since accept() last took a packet.
 
         float m_roundTrip = 0.0f;
         float m_variation = 0.0f;

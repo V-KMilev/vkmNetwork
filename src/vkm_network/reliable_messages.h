@@ -20,9 +20,9 @@ constexpr size_t MESSAGE_WINDOW = 64;  ///< Most messages a sender holds unackno
  * @brief The sending half of messages that must arrive: once each, in the order sent.
  *
  * A message is numbered and kept until the other end says it has it. Every packet carries
- * every message still kept that fits, oldest first - redundancy, not a retransmit timer - so a
- * message rides each packet sent until one arrives, and the receiver drops the copies it
- * already has.
+ * the oldest messages still kept, as many as fit in order - redundancy, not a retransmit timer -
+ * so a message rides each packet sent until it is acknowledged, and the receiver drops the copies
+ * it already has.
  */
 class Outbox {
     public:
@@ -45,7 +45,8 @@ class Outbox {
          *
          * @param bytes The message.
          * @param size  Its length, 1 to MAX_MESSAGE_BYTES.
-         * @return False, keeping nothing, when it is empty or too long, or MESSAGE_WINDOW are waiting.
+         * @return False, keeping nothing, when it is null, empty or too long, or MESSAGE_WINDOW are
+         *         waiting.
          */
         bool push(const uint8_t* bytes, size_t size);
 
@@ -81,7 +82,8 @@ class Outbox {
 
     private:
         std::deque<Message> m_pending;
-        uint16_t            m_next = 1;  ///< The next message's sequence; zero means none yet.
+        uint16_t            m_next = 1;  ///< The next message's sequence, never zero: an acknowledgement
+                                         ///< of zero has none yet.
 };
 
 /**
@@ -120,7 +122,7 @@ class Inbox {
         /// The latest sequence handed on, for the acknowledgement; zero before any.
         uint16_t newest() const { return m_newest; }
 
-        /// newest(), as an acknowledgement sent: the sender may now be handed on as many again.
+        /// newest(), as an acknowledgement sent: as many of the sender's messages may be handed on again.
         uint16_t acknowledge() {
             m_room = MESSAGE_WINDOW;
             return m_newest;

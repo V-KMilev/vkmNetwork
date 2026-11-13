@@ -188,12 +188,10 @@ class BitReader {
         /**
          * @brief Read back the pair u64 wrote, high half first.
          *
-         * Into named locals: operand evaluation order is unspecified, so two
-         * reads in one expression could differ between builds.
-         *
          * @return The value; zero when the reader had already failed.
          */
         uint64_t u64() {
+            // Into named locals: two reads in one expression would run in an order the compiler picks.
             const uint64_t high = bits(32);
             const uint64_t low  = bits(32);
             return (high << 32) | low;
