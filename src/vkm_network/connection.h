@@ -28,7 +28,7 @@ bool isNewerSequence(uint16_t a, uint16_t b);
  *
  * Nothing is retransmitted: the next packet says it again, newer.
  * Acknowledgement measures the trip and what a peer holds. A packet older than
- * one already seen is refused, or the world would mix two moments.
+ * one already seen is refused, or the receiver would mix two moments.
  */
 class Connection {
     public:
@@ -43,9 +43,9 @@ class Connection {
                                                         ///< on.
 
         static constexpr float MAX_SILENCE_A_FRAME = 0.25f;  ///< The most silence one advance adds: a frame
-                                                             ///< this end spent stalled - a load, a bake - is
-                                                             ///< its own, not the peer's, whose packets wait
-                                                             ///< in the socket to be read.
+                                                             ///< this end spent stalled - a load, a long
+                                                             ///< frame - is its own, not the peer's, whose
+                                                             ///< packets wait in the socket to be read.
 
         static constexpr uint16_t NO_SEQUENCE = 0;  ///< The sequence number nothing ever sends, so a header
                                                     ///< can say "nothing". A sender skips it, on the first

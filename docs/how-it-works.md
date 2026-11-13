@@ -16,7 +16,8 @@ socket's log rather than at the frame rate. On Windows a peer's ICMP "port unrea
 next read, so a dead peer would cut a live one's reads short; the socket turns that report off.
 
 `Address` is an IPv4 host and a port in host byte order. `parse` takes "host:port", or a host and the
-caller's fallback port, and goes through the system's resolver for a name; "27015x" is refused whole,
+caller's fallback port, and goes through the system's resolver for a name, which blocks until it
+answers, so a name is resolved off the frame; "27015x" is refused whole,
 not read as 27015. Winsock is started before any entry point is called, resolving included.
 
 ## The connection

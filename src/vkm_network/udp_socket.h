@@ -11,7 +11,7 @@ namespace Vkm::Network {
 /**
  * @brief A non-blocking UDP socket, the same on Windows and Linux.
  *
- * The whole Winsock/BSD difference sits behind this type. Non-blocking, so a
+ * A socket's Winsock/BSD difference sits behind this type. Non-blocking, so a
  * frame never stalls on the network.
  */
 class UdpSocket {

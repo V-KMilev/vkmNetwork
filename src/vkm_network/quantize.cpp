@@ -30,7 +30,8 @@ uint32_t toSigned(float value, float range, uint32_t width) {
     const float clamped = glm::clamp(value / range, -1.0f, 1.0f);
     // Held to the levels: past 25 bits a float rounds them up, which would land the ends one code out,
     // and at 32 overflow.
-    const int64_t step = std::clamp<int64_t>(std::llround(clamped * static_cast<float>(levels)), -levels, levels);
+    const int64_t rounded = std::llround(clamped * static_cast<float>(levels));
+    const int64_t step    = std::clamp<int64_t>(rounded, -levels, levels);
     return static_cast<uint32_t>(step + levels);
 }
 

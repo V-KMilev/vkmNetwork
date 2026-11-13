@@ -164,7 +164,7 @@ bool UdpSocket::send(const Address& to, const uint8_t* bytes, size_t size) {
             m_writeFailed = true;
             LOG_WARNING(
                 "A UDP send to %s failed; further failures on this socket "
-                "are not repeated",
+                "are not repeated until one succeeds",
                 to.toString().c_str()
             );
         }
@@ -212,7 +212,7 @@ bool UdpSocket::receive(std::vector<uint8_t>& out, Address& from) {
             m_readFailed = true;
             LOG_WARNING(
                 "A UDP read failed for a reason other than being empty; "
-                "further failures on this socket are not repeated"
+                "further failures on this socket are not repeated until one succeeds"
             );
         }
         return false;

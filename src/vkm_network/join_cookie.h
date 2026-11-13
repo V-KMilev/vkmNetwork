@@ -10,8 +10,7 @@ namespace Vkm::Network {
 /**
  * @brief SipHash-2-4 of @p size bytes, under the 128-bit key (@p k0, @p k1).
  *
- * A MAC: without the key, one output says nothing of another. FNV-1a can be
- * steered by the sender, so it never stands in for this.
+ * A MAC: without the key, one output says nothing of another.
  *
  * @param k0   First half of the key, as SipHash reads its bytes 0 to 7.
  * @param k1   Second half, bytes 8 to 15.

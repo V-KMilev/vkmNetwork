@@ -4,7 +4,7 @@ A UDP transport for a game: a non-blocking socket and an IPv4 address; a connect
 acknowledges, times the round trip, counts loss and refuses what is older than what it has seen;
 messages that arrive once and in order, riding a packet's spare room; a stateless join token; a bit
 stream; and the coders that turn a float into bits the same way on every machine. It knows nothing of
-what a game sends - no messages of its own, no snapshots, no scene - and runs on no thread of its own.
+what a game sends - no message types of its own, no snapshots, no scene - and runs on no thread of its own.
 
 ## Conventions
 
@@ -24,7 +24,7 @@ what a game sends - no messages of its own, no snapshots, no scene - and runs on
 ```cpp
 using namespace Vkm::Network;
 
-UdpSocket socket;             // one for every peer
+UdpSocket socket;             // one, shared by every peer
 if (!socket.open(port)) ...   // 0 for a port the system picks
 Connection peer;
 peer.open(Address::parse("127.0.0.1:27750"));
@@ -71,16 +71,16 @@ everything is in `Vkm::Network`.
 
 ## What it holds
 
-| Header                | What                                                                          |
-|-----------------------|-------------------------------------------------------------------------------|
-| `udp_socket.h`        | `UdpSocket`: non-blocking, the same on Windows and Linux                       |
-| `address.h`           | `Address`: an IPv4 host and a port; `parse`, `parsePort`, `toString`           |
-| `connection.h`        | `Connection`: sequence, acknowledgement, round trip, loss; `isNewerSequence`  |
-| `reliable_messages.h` | `Outbox` and `Inbox`: messages once each, in order                             |
-| `join_cookie.h`       | `JoinCookie`: the stateless token; `sipHash24`                                 |
-| `bit_stream.h`        | `BitWriter` and `BitReader`                                                    |
+| Header                | What                                                                               |
+|-----------------------|------------------------------------------------------------------------------------|
+| `udp_socket.h`        | `UdpSocket`: non-blocking, the same on Windows and Linux                           |
+| `address.h`           | `Address`: an IPv4 host and a port; `parse`, `parsePort`, `toString`               |
+| `connection.h`        | `Connection`: sequence, acknowledgement, round trip, loss; `isNewerSequence`       |
+| `reliable_messages.h` | `Outbox` and `Inbox`: messages once each, in order                                 |
+| `join_cookie.h`       | `JoinCookie`: the stateless token; `sipHash24`                                     |
+| `bit_stream.h`        | `BitWriter` and `BitReader`                                                        |
 | `quantize.h`          | `toSigned` (zero exact), `toFixed`, `fixedBits`, the smallest-three rotation coder |
-| `little_endian.h`     | `readLittleEndian`, `writeLittleEndian`                                        |
+| `little_endian.h`     | `readLittleEndian`, `writeLittleEndian`                                            |
 
 Each is under `src/vkm_network/`.
 

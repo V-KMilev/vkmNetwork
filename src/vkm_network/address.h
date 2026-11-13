@@ -25,8 +25,8 @@ struct Address {
     /**
      * @brief Read "host:port", or "host" with @p fallbackPort.
      *
-     * A caller passes the project's port as the fallback. A name that is not
-     * dotted quad goes through the system resolver.
+     * A name that is not dotted quad goes through the system resolver, which
+     * blocks until it answers, for seconds when it cannot: resolve a name off the frame.
      *
      * @param text         Host, or host:port.
      * @param fallbackPort Used when @p text carries no port.

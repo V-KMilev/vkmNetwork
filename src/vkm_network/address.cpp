@@ -42,7 +42,7 @@ Address Address::parse(const std::string& text, uint16_t fallbackPort) {
     // inet_pton and the resolver are winsock entry points; no socket may exist yet.
     if (!ensureWinsock()) return {};
 
-    // On the last colon, so a bracketed form cannot split on its own separators.
+    // On the last colon: a port holds none.
     std::string host = text;
     uint16_t    port = fallbackPort;
 

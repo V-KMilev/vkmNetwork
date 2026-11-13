@@ -28,7 +28,7 @@ bool isNewerSequence(uint16_t a, uint16_t b) {
 }
 
 void Connection::open(const Address& peer) {
-    // The sent list keeps its buffer, so a reply to an address that holds no seat allocates nothing.
+    // The sent list keeps its buffer, so a connection reopened for each new peer allocates nothing.
     std::vector<Sent> sent = std::move(m_sent);
     sent.clear();
 

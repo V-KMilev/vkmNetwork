@@ -35,8 +35,8 @@ option(VKM_NETWORK_ASSERTS "Keep the library's VKM_ASSERTs on whatever the build
 # somewhere else.
 file(GLOB_RECURSE VKM_NETWORK_SOURCES CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
 
-# Static and position-independent: a consumer links it whole into a shared library of its own,
-# as the engine does into libvkm_core, so it ships no binary of its own.
+# Static and position-independent: a consumer links it whole into a shared library of its own, so
+# it ships no binary of its own.
 add_library(${PROJECT_NAME} STATIC ${VKM_NETWORK_SOURCES})
 set_target_properties(${PROJECT_NAME} PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
@@ -57,8 +57,7 @@ if(WIN32)
     target_link_libraries(${PROJECT_NAME} PRIVATE ws2_32)
 endif()
 
-# The engine's warning set, so a file reads the same on either side of the boundary. Clang reads the
-# doc blocks: a @param naming no parameter is an error.
+# Its warning set. Clang reads the doc blocks: a @param naming no parameter is an error.
 set(_vkm_network_warnings
     -Wall
     -Wextra
