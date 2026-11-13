@@ -73,7 +73,8 @@ bool Inbox::read(BitReader& in, const Deliver& deliver) {
     if (!in.boolean()) return !in.failed();
     uint16_t sequence    = in.u16();
     const uint32_t count = in.bits(COUNT_BITS);
-    if (in.failed()) return false;
+    // A sender that says messages follow writes at least one.
+    if (in.failed() || count == 0) return false;
 
     // As long as a length field says: read per packet, so it takes no allocation.
     std::array<uint8_t, (1u << LENGTH_BITS) - 1> bytes;

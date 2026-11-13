@@ -245,5 +245,16 @@ TEST("messages that do not decode are refused") {
     out.finish();
     CHECK(deliver(inbox, bytes, &read).empty());
     CHECK(!read);
+
+    // Nor is a packet that says messages follow and counts none.
+    bytes.clear();
+    BitWriter none(bytes, 16);
+    none.boolean(true);
+    none.u16(1);
+    none.bits(0, 7);
+    none.finish();
+    read = true;
+    deliver(inbox, bytes, &read);
+    CHECK(!read);
     CHECK(inbox.newest() == 0);
 }
