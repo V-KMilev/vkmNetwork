@@ -163,19 +163,22 @@ TEST("a socket closes safely twice and when never opened, and a closed one sends
     CHECK(!never.send(Address{0x7F000001u, 9}, bytes.data(), bytes.size()));
 }
 
-TEST("a port another socket holds is refused, and the library says so as VKM-NETWORK under NET") {
+TEST("a port another socket holds is refused, and the library says so and why, as VKM-NETWORK under NET") {
     UdpSocket first;
     REQUIRE(first.open(0));
     UdpSocket second;
     CHECK(!second.open(first.localAddress().port));
     CHECK(!second.isOpen());
 
+    // The port, then the system's reason.
+    const std::string said = "Could not bind port " + std::to_string(first.localAddress().port) + ": ";
     bool found = false;
     std::istringstream log(Vkm::Test::logText());
     for (std::string text; std::getline(log, text);) {
         const auto line = Vkm::Log::parseLine(text);
-        if (!line || line->message.find("is not available") == std::string_view::npos) continue;
+        if (!line || line->message.find(said) == std::string_view::npos) continue;
         found = true;
+        CHECK(line->message.size() > said.size());
         CHECK(line->suffix == "VKM-NETWORK");
         CHECK(line->category == "NET");
         CHECK(line->level == Vkm::Log::Level::Error);

@@ -11,8 +11,9 @@ bool ensureWinsock() {
     // A function-local static: started once, whichever thread arrives first.
     static const bool started = []() {
         WSADATA data{};
-        if (WSAStartup(MAKEWORD(2, 2), &data) == 0) return true;
-        LOG_ERROR("Winsock would not start, so nothing here can reach a network");
+        const int failed = WSAStartup(MAKEWORD(2, 2), &data);
+        if (failed == 0) return true;
+        LOG_ERROR("Winsock would not start (error %d), so nothing here can reach a network", failed);
         return false;
     }();
     return started;

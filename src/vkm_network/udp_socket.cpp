@@ -3,6 +3,7 @@
 #include "vkm_network/udp_socket.h"
 
 #include <cstring>
+#include <string>
 
 #include "vkm_log/logger.h"
 
@@ -37,6 +38,15 @@ namespace Vkm::Network {
 
 namespace {
 
+/// What the system said of the call that just failed.
+std::string lastError() {
+#if defined(_WIN32)
+    return "Winsock error " + std::to_string(WSAGetLastError());
+#else
+    return std::strerror(errno);
+#endif
+}
+
 sockaddr_in toSockaddr(const Address& address) {
     sockaddr_in out{};
     out.sin_family      = AF_INET;
@@ -57,7 +67,7 @@ bool UdpSocket::open(uint16_t port) {
 
     const NativeSocket handle = ::socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
     if (handle == static_cast<NativeSocket>(INVALID)) {
-        LOG_ERROR("Could not create a UDP socket");
+        LOG_ERROR("Could not create a UDP socket: %s", lastError().c_str());
         return false;
     }
 
@@ -67,7 +77,7 @@ bool UdpSocket::open(uint16_t port) {
     local.sin_port        = htons(port);
 
     if (::bind(handle, reinterpret_cast<sockaddr*>(&local), sizeof(local)) != 0) {
-        LOG_ERROR("Port %u is not available", port);
+        LOG_ERROR("Could not bind port %u: %s", port, lastError().c_str());
         VKM_CLOSE_SOCKET(handle);
         return false;
     }
@@ -90,8 +100,9 @@ bool UdpSocket::open(uint16_t port) {
     ) == 0;
     if (!reportingOff) {
         LOG_WARNING(
-            "Could not turn off connection-reset reporting; a peer that goes "
-            "away will cut this socket's reads short"
+            "Could not turn off connection-reset reporting (%s); a peer that goes "
+            "away will cut this socket's reads short",
+            lastError().c_str()
         );
     }
 
@@ -102,7 +113,10 @@ bool UdpSocket::open(uint16_t port) {
     const bool set  = flags != -1 && ::fcntl(handle, F_SETFL, flags | O_NONBLOCK) == 0;
 #endif
     if (!set) {
-        LOG_ERROR("A UDP socket would not go non-blocking, and a blocking one would stall the frame");
+        LOG_ERROR(
+            "A UDP socket would not go non-blocking (%s), and a blocking one would stall the frame",
+            lastError().c_str()
+        );
         VKM_CLOSE_SOCKET(handle);
         return false;
     }
@@ -161,11 +175,14 @@ bool UdpSocket::send(const Address& to, const uint8_t* bytes, size_t size) {
     if (written < 0 || static_cast<size_t>(written) != size) {
         // Once per run of failures: the cause repeats at the frame rate.
         if (!m_writeFailed) {
+            // Read before anything else can call the system.
+            const std::string reason = written < 0 ? lastError() : "only part of it went";
             m_writeFailed = true;
             LOG_WARNING(
-                "A UDP send to %s failed; further failures on this socket "
+                "A UDP send to %s failed (%s); further failures on this socket "
                 "are not repeated until one succeeds",
-                to.toString().c_str()
+                to.toString().c_str(),
+                reason.c_str()
             );
         }
         return false;
@@ -211,8 +228,8 @@ bool UdpSocket::receive(std::vector<uint8_t>& out, Address& from) {
         if (!VKM_WOULD_BLOCK && !m_readFailed) {
             m_readFailed = true;
             LOG_WARNING(
-                "A UDP read failed for a reason other than being empty; "
-                "further failures on this socket are not repeated until one succeeds"
+                "A UDP read failed (%s); further failures on this socket are not repeated until one succeeds",
+                lastError().c_str()
             );
         }
         return false;
