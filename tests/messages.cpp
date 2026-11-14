@@ -109,7 +109,7 @@ TEST("a message past one the inbox has not had is not handed on, and is once the
     bool read = false;
     CHECK(deliver(inbox, third, &read).empty());
     CHECK(read);
-    CHECK(inbox.newest() == 0);
+    CHECK(inbox.acknowledge() == 0);
 
     CHECK(deliver(inbox, all) == (std::vector<Message>{messageOf(1, 4), messageOf(2, 4), messageOf(3, 4)}));
     CHECK(deliver(inbox, third).empty());
@@ -177,8 +177,9 @@ TEST("the inbox hands on at most MESSAGE_WINDOW between two acknowledgements") {
     }
     CHECK(deliver(inbox, packetFrom(outbox)).size() == MESSAGE_WINDOW);
 
-    // A sender that takes its own word for what arrived, and sends a window more.
-    outbox.acknowledge(inbox.newest());
+    // A sender that takes its own word for what arrived - all it sent, numbered from 1 - and sends a
+    // window more.
+    outbox.acknowledge(static_cast<uint16_t>(MESSAGE_WINDOW));
     for (uint32_t i = 0; i < MESSAGE_WINDOW; ++i) {
         const Message message = messageOf(100 + i, 2);
         REQUIRE(outbox.push(message.data(), message.size()));
@@ -225,7 +226,7 @@ TEST("clear forgets every message and numbers the next from the start") {
     REQUIRE(outbox.push(message.data(), message.size()));
     Inbox inbox;
     CHECK(deliver(inbox, packetFrom(outbox)) == std::vector<Message>{message});
-    CHECK(inbox.newest() == 1);
+    CHECK(inbox.acknowledge() == 1);
 }
 
 TEST("messages that do not decode are refused") {
@@ -256,5 +257,5 @@ TEST("messages that do not decode are refused") {
     read = true;
     deliver(inbox, bytes, &read);
     CHECK(!read);
-    CHECK(inbox.newest() == 0);
+    CHECK(inbox.acknowledge() == 0);
 }

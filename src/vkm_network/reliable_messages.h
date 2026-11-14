@@ -119,10 +119,13 @@ class Inbox {
          */
         bool read(BitReader& in, const Deliver& deliver);
 
-        /// The latest sequence handed on, for the acknowledgement; zero before any.
-        uint16_t newest() const { return m_newest; }
-
-        /// newest(), as an acknowledgement sent: as many of the sender's messages may be handed on again.
+        /**
+         * @brief The acknowledgement this end sends: the latest sequence handed on.
+         *
+         * It opens the window again: MESSAGE_WINDOW more messages may be handed on before the next.
+         *
+         * @return The latest sequence handed on; zero before any.
+         */
         uint16_t acknowledge() {
             m_room = MESSAGE_WINDOW;
             return m_newest;
