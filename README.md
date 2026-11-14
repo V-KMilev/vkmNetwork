@@ -84,9 +84,9 @@ everything is in `Vkm::Network`.
 | `join_cookie.h`       | `JoinCookie`: the stateless token; `sipHash24`                                     |
 | `bit_stream.h`        | `BitWriter` and `BitReader`                                                        |
 | `quantize.h`          | `toSigned` (zero exact), `toFixed`, `fixedBits`, the smallest-three rotation coder |
-| `little_endian.h`     | `readLittleEndian`, `writeLittleEndian`                                            |
 
-Each is under `src/vkm_network/`.
+Each is under `src/vkm_network/`; the library's own helpers, its byte order and Winsock's headers, are
+under `private/`, where no consumer includes them.
 
 ## Tests
 

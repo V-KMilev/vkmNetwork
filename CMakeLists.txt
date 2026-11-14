@@ -40,11 +40,13 @@ file(GLOB_RECURSE VKM_NETWORK_SOURCES CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_D
 add_library(${PROJECT_NAME} STATIC ${VKM_NETWORK_SOURCES})
 set_target_properties(${PROJECT_NAME} PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
-# The root above vkm_network/, so an include names the library: "vkm_network/connection.h".
+# The root above vkm_network/, so an include names the library: "vkm_network/connection.h". The
+# library's own helpers sit in a root of their own that no consumer sees.
 target_include_directories(${PROJECT_NAME} PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
     $<INSTALL_INTERFACE:include>
 )
+target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/private)
 
 target_link_libraries(${PROJECT_NAME} PUBLIC
     glm

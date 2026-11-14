@@ -28,8 +28,9 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/harness/discover.cmake)
 vkm_discover_tests(vkm_network_tests vkm_network)
 
 # The library as a consumer builds it.
-add_test(NAME "vkm_network: every include is its own, the standard library's, glm's, vkmLog's or the sockets', and no public header names a scene"
-    COMMAND ${CMAKE_COMMAND} -DSOURCE_DIR=${PROJECT_SOURCE_DIR}/src -P ${CMAKE_CURRENT_SOURCE_DIR}/includes.cmake
+add_test(NAME "vkm_network: every include is its own, the standard library's, glm's, vkmLog's or the sockets', and no public header includes a private one or names a scene"
+    COMMAND ${CMAKE_COMMAND} -DSOURCE_DIR=${PROJECT_SOURCE_DIR}/src
+        -DPRIVATE_DIR=${PROJECT_SOURCE_DIR}/private -P ${CMAKE_CURRENT_SOURCE_DIR}/includes.cmake
 )
 add_test(NAME "vkm_network: a consumer adds it after glm and vkm_log, and without either it stops and says which"
     COMMAND ${CMAKE_COMMAND} -DLIBRARY_DIR=${PROJECT_SOURCE_DIR} -DREQUIRES=glm|vkm_log
@@ -37,7 +38,7 @@ add_test(NAME "vkm_network: a consumer adds it after glm and vkm_log, and withou
         -P ${CMAKE_CURRENT_SOURCE_DIR}/harness/consumer.cmake
 )
 set_tests_properties(
-    "vkm_network: every include is its own, the standard library's, glm's, vkmLog's or the sockets', and no public header names a scene"
+    "vkm_network: every include is its own, the standard library's, glm's, vkmLog's or the sockets', and no public header includes a private one or names a scene"
     "vkm_network: a consumer adds it after glm and vkm_log, and without either it stops and says which"
     PROPERTIES LABELS vkm_network
 )
