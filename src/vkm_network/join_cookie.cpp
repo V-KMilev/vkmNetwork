@@ -70,12 +70,10 @@ uint64_t sipHash24(uint64_t k0, uint64_t k1, const uint8_t* data, size_t size) {
     return v0 ^ v1 ^ v2 ^ v3;
 }
 
-JoinCookie::JoinCookie() { rekey(); }
-
-void JoinCookie::rekey() {
-    m_k0 = drawFromSystem();
-    m_k1 = drawFromSystem();
-}
+JoinCookie::JoinCookie()
+    : m_k0(drawFromSystem())
+    , m_k1(drawFromSystem())
+{}
 
 uint64_t JoinCookie::issue(const Address& to, double now) const {
     VKM_ASSERT(now >= 0.0, "a join cookie's clock reads zero or more, not %f", now);

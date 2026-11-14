@@ -61,16 +61,3 @@ TEST("a cookie draws its own key when it is made: two give one address different
     CHECK(first.issue(client, 5.0) != second.issue(client, 5.0));
     CHECK(!second.accepts(client, first.issue(client, 5.0), 5.0));
 }
-
-TEST("rekey voids every token given before") {
-    JoinCookie cookie;
-    const Address  client{0x7F000001u, 4242};
-    const uint64_t before = cookie.issue(client, 5.0);
-    cookie.rekey();
-    CHECK(!cookie.accepts(client, before, 5.0));
-    CHECK(cookie.accepts(client, cookie.issue(client, 5.0), 5.0));
-
-    // Two servers' keys are their own.
-    JoinCookie other;
-    CHECK(!other.accepts(client, cookie.issue(client, 5.0), 5.0));
-}

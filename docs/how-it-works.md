@@ -60,13 +60,13 @@ as it starts from what is unacknowledged.
 
 ## The join token
 
-A source address is trivially forged, so a server proves an address before it keeps anything for it:
-it answers with a token the address must echo. `JoinCookie` makes that token **stateless** - SipHash-2-4
-of the address and a ten-second window under a key drawn from the operating system - so a flood of
-forged requests costs a hash and a reply no larger each, and crowds out no real join. A token is good
-for its window and the next; `rekey` voids every token given before. It proves an address hears; it is
-not encryption. `sipHash24` is the reference SipHash-2-4, reading its words little-endian, so every
-machine hashes alike.
+A source address is trivially forged, so a server proves an address before it keeps anything for it: it
+answers with a token the address must echo. `JoinCookie` makes that token **stateless** - SipHash-2-4 of
+the address and a ten-second window under a key drawn from the operating system - so a flood of forged
+requests costs a hash and a reply no larger each, and crowds out no real join. A token is good for its
+window and the next, and a cookie made again voids every token given before. It proves an address hears;
+it is not encryption. `sipHash24` is the reference SipHash-2-4, reading its words little-endian, so
+every machine hashes alike.
 
 ## The bit stream and the coders
 

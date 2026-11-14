@@ -46,9 +46,6 @@ class JoinCookie {
         JoinCookie& operator=(JoinCookie && other) = default;
 
     public:
-        /// Draw a new key from the operating system. Every token given before is void.
-        void rekey();
-
         /**
          * @brief The token for @p to, as of @p now.
          *
